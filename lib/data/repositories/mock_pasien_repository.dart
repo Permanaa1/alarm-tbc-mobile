@@ -6,6 +6,7 @@ import 'pasien_repository.dart';
 
 /// Data tiruan di memori. Reset setiap aplikasi dimulai ulang (hot restart).
 /// Kode uji: ABCD-EFGH (kode apa pun dengan 8 huruf/angka diterima, selain itu ditolak).
+/// Data tiruan memakai 3 kali minum sehari agar tampilan multi-dosis bisa dirancang.
 class MockPasienRepository implements PasienRepository {
   bool _aktif = false;
   bool _consent = false;
@@ -13,20 +14,24 @@ class MockPasienRepository implements PasienRepository {
   late final List<JadwalItem> _semua = _buatJadwal();
 
   static const Duration _tunda = Duration(milliseconds: 500);
+  static const List<String> _jamMinum = ['07:00', '14:00', '21:00'];
 
   List<JadwalItem> _buatJadwal() {
     final h = hariIni();
     final hasil = <JadwalItem>[];
+    var id = 1;
     for (var i = -6; i <= 13; i++) {
-      hasil.add(JadwalItem(
-        id: i + 7,
-        jenis: 'minum',
-        tanggal: DateTime(h.year, h.month, h.day + i),
-        jam: '07:00',
-        keterangan: 'Fase intensif',
-        // 3 hari lalu sengaja dibiarkan kosong agar riwayat punya contoh "belum tercatat"
-        status: (i < 0 && i != -3) ? 'diminum' : null,
-      ));
+      for (final jam in _jamMinum) {
+        hasil.add(JadwalItem(
+          id: id++,
+          jenis: 'minum',
+          tanggal: DateTime(h.year, h.month, h.day + i),
+          jam: jam,
+          keterangan: 'OAT KDT Fase Intensif',
+          // 3 hari lalu sengaja dibiarkan kosong agar riwayat punya contoh "belum tercatat"
+          status: (i < 0 && i != -3) ? 'diminum' : null,
+        ));
+      }
     }
     return hasil;
   }
@@ -47,6 +52,7 @@ class MockPasienRepository implements PasienRepository {
           namaObat: 'OAT KDT Fase Intensif',
           dosisTeks: '3 tablet 1x sehari pagi',
           fase: 'intensif',
+          jamMinum: _jamMinum,
           tglMulai: h,
           tglSelesai: DateTime(h.year, h.month, h.day + 13),
         ),

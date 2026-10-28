@@ -2,7 +2,13 @@ class Konstanta {
   /// Nama aplikasi sengaja netral (tanpa kata TBC) untuk mengurangi stigma.
   static const String namaApp = 'Pengingat Obat';
 
-  /// Dipakai mulai Batch 7B. 10.0.2.2 = alamat komputer dari emulator Android.
-  /// Untuk HP fisik, ganti dengan IP komputer di Wi-Fi yang sama.
-  static const String baseUrl = 'http://10.0.2.2:8000/api/v1';
+  /// Alamat API. Diatur saat menjalankan aplikasi lewat --dart-define=API_BASE_URL=...
+  /// (sudah disiapkan di .vscode/launch.json). Bawaan: server lokal di komputer yang sama.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://127.0.0.1:8000/api/v1',
+  );
+
+  /// true = pakai data tiruan (tanpa server). Dipakai penyempurna desain.
+  static const bool pakaiMock = bool.fromEnvironment('PAKAI_MOCK');
 }

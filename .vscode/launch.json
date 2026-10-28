@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Desain (data tiruan, tanpa server)",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": ["--dart-define=PAKAI_MOCK=true"]
+    },
+    {
+      "name": "Chrome + API lokal",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "toolArgs": ["--dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1"]
+    },
+    {
+      "name": "Emulator Android + API lokal",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": ["--dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1"]
+    },
+    {
+      "name": "HP fisik + API lokal (ganti IP komputer)",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": ["--dart-define=API_BASE_URL=http://192.168.1.10:8000/api/v1"]
+    }
+  ]
+}

@@ -43,6 +43,7 @@ class BerandaScreen extends StatelessWidget {
     final tema = Theme.of(context);
     final profil = state.profil;
     final berikutnya = state.berikutnya;
+    final siap = state.dosisSiapDiminum;
     final pmoNama = profil?.pmoNama;
     final pmoHubungan = profil?.pmoHubungan;
     final tanggalTeks =
@@ -72,6 +73,11 @@ class BerandaScreen extends StatelessWidget {
               Text('Halo, ${profil?.nama ?? ''}',
                   style: tema.textTheme.headlineSmall),
               Text(tanggalTeks, style: tema.textTheme.bodyLarge),
+              if (state.jumlahDosisHariIni > 0)
+                Text(
+                  'Hari ini: ${state.dosisSelesaiHariIni} dari ${state.jumlahDosisHariIni} kali minum sudah tercatat',
+                  style: tema.textTheme.bodyLarge,
+                ),
               const SizedBox(height: 16),
               if (state.pesanError != null) ...[
                 Text(
@@ -89,10 +95,19 @@ class BerandaScreen extends StatelessWidget {
                 label: 'SUDAH MINUM',
                 icon: Icons.check_circle_outline,
                 sedangProses: state.sedangProses,
-                onPressed: berikutnya == null
+                onPressed: siap == null
                     ? null
-                    : () => context.read<AppState>().tandaiSudahMinum(berikutnya),
+                    : () => context.read<AppState>().tandaiSudahMinum(siap),
               ),
+              if (siap == null && berikutnya != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Tombol aktif 1 jam sebelum jam minum.',
+                    textAlign: TextAlign.center,
+                    style: tema.textTheme.bodyMedium,
+                  ),
+                ),
               const SizedBox(height: 24),
               if (profil != null && profil.resep.isNotEmpty) ...[
                 Text('Obat Anda', style: tema.textTheme.titleLarge),
@@ -100,7 +115,11 @@ class BerandaScreen extends StatelessWidget {
                   Card(
                     child: ListTile(
                       title: Text(r.namaObat),
-                      subtitle: Text(r.dosisTeks),
+                      subtitle: Text(
+                        r.jamMinum.isEmpty
+                            ? r.dosisTeks
+                            : '${r.dosisTeks}\nJam minum: ${r.jamMinum.join(', ')}',
+                      ),
                     ),
                   ),
                 const SizedBox(height: 8),
@@ -174,6 +193,7 @@ class _KartuBerikutnya extends StatelessWidget {
                   ),
                   if (berikutnya!.keterangan != null)
                     Text(berikutnya!.keterangan!,
+                        textAlign: TextAlign.center,
                         style: tema.textTheme.bodyLarge),
                 ],
               )
