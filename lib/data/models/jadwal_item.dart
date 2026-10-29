@@ -59,4 +59,10 @@ class JadwalItem {
   }
 
   bool get sudahMinum => status == 'diminum';
+
+  // Getters for compatibility with reference UI
+  String get date => formatTanggal(tanggal);
+  String get time => jam;
+  int get scheduleId => id;
+  bool get synced => status != null; // Simplification for UI
 }
