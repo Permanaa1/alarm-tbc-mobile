@@ -28,6 +28,15 @@ class JadwalItem {
         status: json['status'] as String?,
       );
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'jenis': jenis,
+        'tanggal': formatTanggal(tanggal),
+        'jam': jam,
+        'keterangan': keterangan,
+        'status': status,
+      };
+
   JadwalItem copyWith({String? status}) => JadwalItem(
         id: id,
         jenis: jenis,

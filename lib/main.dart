@@ -5,10 +5,12 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'core/constants.dart';
 import 'data/api/api_client.dart';
+import 'data/api/pasien_api.dart';
 import 'data/api/token_store.dart';
-import 'data/repositories/api_pasien_repository.dart';
+import 'data/local/lokal_store.dart';
 import 'data/repositories/mock_pasien_repository.dart';
 import 'data/repositories/pasien_repository.dart';
+import 'data/repositories/sinkron_pasien_repository.dart';
 import 'logic/app_state.dart';
 
 PasienRepository _buatRepository() {
@@ -16,7 +18,11 @@ PasienRepository _buatRepository() {
     return MockPasienRepository();
   }
   final token = TokenStore();
-  return ApiPasienRepository(ApiClient(token), token);
+  return SinkronPasienRepository(
+    PasienApi(ApiClient(token)),
+    PrefsLokalStore(),
+    token,
+  );
 }
 
 Future<void> main() async {

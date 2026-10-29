@@ -11,4 +11,10 @@ class Konstanta {
 
   /// true = pakai data tiruan (tanpa server). Dipakai penyempurna desain.
   static const bool pakaiMock = bool.fromEnvironment('PAKAI_MOCK');
+
+  /// Berapa hari riwayat yang diminta dari server saat sinkronisasi.
+  static const int jendelaRiwayatHari = 60;
+
+  /// Berapa hari riwayat yang disimpan di HP.
+  static const int simpanRiwayatHari = 120;
 }

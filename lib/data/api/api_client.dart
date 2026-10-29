@@ -34,15 +34,16 @@ class ApiClient {
 }
 
 /// Mengubah kesalahan jaringan/server menjadi pesan yang aman dan mudah dipahami pengguna.
+///
+/// JaringanException = sementara, aman dicoba lagi nanti (tidak ada sinyal, server sibuk).
+/// SesiBerakhirException = token ditolak. AppException biasa = permintaan ditolak server.
 AppException petakanError(DioException e) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
     case DioExceptionType.connectionError:
-      return const AppException(
-        'Tidak bisa terhubung ke server. Periksa sinyal atau kuota internet, lalu coba lagi.',
-      );
+      return const JaringanException();
     case DioExceptionType.badResponse:
       final kode = e.response?.statusCode ?? 0;
       final data = e.response?.data;
@@ -58,18 +59,20 @@ AppException petakanError(DioException e) {
 
       if (kode == 401) return const SesiBerakhirException();
       if (kode == 429) {
-        return const AppException(
+        return const JaringanException(
           'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.',
         );
       }
       if (kode >= 500) {
-        return const AppException('Server sedang bermasalah. Coba lagi nanti.');
+        return const JaringanException(
+          'Server sedang bermasalah. Coba lagi nanti.',
+        );
       }
       if (kode == 422 && data is Map && data['errors'] != null && data['pesan'] == null) {
         return const AppException('Isian belum benar. Periksa kembali.');
       }
       return AppException(pesan ?? 'Permintaan ditolak (kode $kode).');
     default:
-      return const AppException('Terjadi kesalahan jaringan. Coba lagi.');
+      return const JaringanException('Terjadi kesalahan jaringan. Coba lagi.');
   }
 }

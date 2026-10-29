@@ -29,6 +29,15 @@ class Resep {
         tglMulai: parseTanggal(json['tgl_mulai']),
         tglSelesai: parseTanggal(json['tgl_selesai']),
       );
+
+  Map<String, dynamic> toJson() => {
+        'nama_obat': namaObat,
+        'dosis_teks': dosisTeks,
+        'fase': fase,
+        'jam_minum': jamMinum,
+        'tgl_mulai': tglMulai == null ? null : formatTanggal(tglMulai!),
+        'tgl_selesai': tglSelesai == null ? null : formatTanggal(tglSelesai!),
+      };
 }
 
 String _potongJam(String jam) => jam.length >= 5 ? jam.substring(0, 5) : jam;

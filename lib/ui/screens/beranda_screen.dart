@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../data/models/jadwal_item.dart';
 import '../../logic/app_state.dart';
+import '../widgets/banner_sinkron.dart';
 import '../widgets/kartu_jadwal.dart';
 import '../widgets/tombol_besar.dart';
 import 'panduan_izin_screen.dart';
@@ -15,11 +16,17 @@ class BerandaScreen extends StatelessWidget {
 
   Future<void> _konfirmasiKeluar(BuildContext context) async {
     final state = context.read<AppState>();
+    final antrean = state.jumlahAntrean;
+
     final ya = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Keluar dari aplikasi?'),
-        content: const Text('Anda perlu kode baru dari petugas untuk masuk lagi.'),
+        content: Text(
+          antrean > 0
+              ? 'Masih ada $antrean catatan minum yang belum terkirim dan akan hilang bila Anda keluar. Anda juga perlu kode baru dari petugas untuk masuk lagi.'
+              : 'Anda perlu kode baru dari petugas untuk masuk lagi.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -79,6 +86,7 @@ class BerandaScreen extends StatelessWidget {
                   style: tema.textTheme.bodyLarge,
                 ),
               const SizedBox(height: 16),
+              const BannerSinkron(),
               if (state.pesanError != null) ...[
                 Text(
                   state.pesanError!,
@@ -134,7 +142,11 @@ class BerandaScreen extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
               Text('Jadwal hari ini', style: tema.textTheme.titleLarge),
-              for (final j in state.jadwalHariIni) KartuJadwal(item: j),
+              for (final j in state.jadwalHariIni)
+                KartuJadwal(
+                  item: j,
+                  belumTerkirim: state.idBelumTerkirim.contains(j.id),
+                ),
               const SizedBox(height: 24),
               OutlinedButton(
                 onPressed: () => Navigator.push(

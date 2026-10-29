@@ -23,10 +23,14 @@ class KartuJadwal extends StatelessWidget {
     super.key,
     required this.item,
     this.tampilkanTanggal = false,
+    this.belumTerkirim = false,
   });
 
   final JadwalItem item;
   final bool tampilkanTanggal;
+
+  /// true bila konfirmasi minum sudah disimpan di HP tetapi belum sampai ke server.
+  final bool belumTerkirim;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +39,9 @@ class KartuJadwal extends StatelessWidget {
     final judul = tampilkanTanggal
         ? '${DateFormat('EEE, d MMM', 'id_ID').format(item.tanggal)} · ${item.jam}'
         : item.jam;
+    final status = belumTerkirim
+        ? '${labelStatus(item.status)} · menunggu dikirim'
+        : labelStatus(item.status);
 
     return Card(
       child: ListTile(
@@ -44,7 +51,7 @@ class KartuJadwal extends StatelessWidget {
           color: selesai ? tema.colorScheme.primary : tema.colorScheme.outline,
         ),
         title: Text(judul, style: tema.textTheme.titleLarge),
-        subtitle: Text(labelStatus(item.status), style: tema.textTheme.bodyLarge),
+        subtitle: Text(status, style: tema.textTheme.bodyLarge),
       ),
     );
   }

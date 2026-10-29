@@ -7,6 +7,9 @@ import 'pasien_repository.dart';
 /// Data tiruan di memori. Reset setiap aplikasi dimulai ulang (hot restart).
 /// Kode uji: ABCD-EFGH (kode apa pun dengan 8 huruf/angka diterima, selain itu ditolak).
 /// Data tiruan memakai 3 kali minum sehari agar tampilan multi-dosis bisa dirancang.
+///
+/// Untuk merancang tampilan banner offline, ubah nilai di [statusSinkron] di bawah
+/// (misalnya memakaiDataLokal: true dan jumlahAntrean: 2).
 class MockPasienRepository implements PasienRepository {
   bool _aktif = false;
   bool _consent = false;
@@ -63,6 +66,9 @@ class MockPasienRepository implements PasienRepository {
   }
 
   @override
+  StatusSinkron get statusSinkron => const StatusSinkron();
+
+  @override
   Future<bool> sudahAktif() async => _aktif;
 
   @override
@@ -79,7 +85,7 @@ class MockPasienRepository implements PasienRepository {
   }
 
   @override
-  Future<Profil> ambilProfil() async => _profil();
+  Future<Profil> ambilProfil({bool utamakanLokal = false}) async => _profil();
 
   @override
   Future<Profil> setujuiConsent() async {
@@ -89,7 +95,7 @@ class MockPasienRepository implements PasienRepository {
   }
 
   @override
-  Future<List<JadwalItem>> ambilJadwal() async {
+  Future<List<JadwalItem>> ambilJadwal({bool utamakanLokal = false}) async {
     final h = hariIni();
     return _semua
         .map(_terapkan)
@@ -113,6 +119,9 @@ class MockPasienRepository implements PasienRepository {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     _status[jadwalId] = 'diminum';
   }
+
+  @override
+  Future<void> kirimAntrean() async {}
 
   @override
   Future<void> keluar() async {

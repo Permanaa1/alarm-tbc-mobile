@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
 
 import '../core/tanggal.dart';
 import '../data/models/jadwal_item.dart';
@@ -8,8 +10,10 @@ import '../data/repositories/pasien_repository.dart';
 enum StatusApp { memuat, belumAktif, perluConsent, siap, gagalMuat }
 
 /// Satu-satunya sumber keadaan aplikasi. Layar hanya membaca ini dan memanggil method-nya.
-class AppState extends ChangeNotifier {
-  AppState(this._repo);
+class AppState extends ChangeNotifier with WidgetsBindingObserver {
+  AppState(this._repo) {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   final PasienRepository _repo;
 
@@ -22,6 +26,20 @@ class AppState extends ChangeNotifier {
   List<JadwalItem> riwayat = [];
   bool sedangProses = false;
   String? pesanError;
+
+  /// Keadaan sinkronisasi (offline, antrean kiriman, waktu terakhir diperbarui).
+  StatusSinkron sinkron = const StatusSinkron();
+
+  bool get memakaiDataLokal => sinkron.memakaiDataLokal;
+  int get jumlahAntrean => sinkron.jumlahAntrean;
+  DateTime? get terakhirSinkron => sinkron.terakhirSinkron;
+  Set<int> get idBelumTerkirim => sinkron.idBelumTerkirim;
+
+  Timer? _timer;
+  bool _menyegarkan = false;
+  bool _mengirim = false;
+
+  // ---------------- data turunan untuk tampilan ----------------
 
   /// Jadwal hari ini, terurut dari pagi ke malam.
   List<JadwalItem> get jadwalHariIni {
@@ -59,12 +77,15 @@ class AppState extends ChangeNotifier {
     return belum.isEmpty ? null : belum.first;
   }
 
-  /// Dipanggil saat aplikasi dibuka.
+  // ---------------- alur utama ----------------
+
+  /// Dipanggil saat aplikasi dibuka. Memakai salinan di HP lebih dulu agar layar langsung
+  /// tampil, lalu memperbarui dari server di latar belakang.
   Future<void> mulai() async {
     try {
       if (await _repo.sudahAktif()) {
-        profil = await _repo.ambilProfil();
-        await _tentukanLangkah();
+        profil = await _repo.ambilProfil(utamakanLokal: true);
+        await _tentukanLangkah(utamakanLokal: true);
       } else {
         status = StatusApp.belumAktif;
       }
@@ -74,7 +95,14 @@ class AppState extends ChangeNotifier {
         status = StatusApp.gagalMuat;
       }
     }
+
+    _ambilStatus();
     notifyListeners();
+
+    if (status == StatusApp.siap) {
+      _mulaiPenjadwal();
+      unawaited(segarkan());
+    }
   }
 
   /// Tombol "Coba lagi" pada layar gagal memuat.
@@ -101,7 +129,10 @@ class AppState extends ChangeNotifier {
 
     await _lanjutkan();
     sedangProses = false;
+    _ambilStatus();
     notifyListeners();
+
+    if (status == StatusApp.siap) _mulaiPenjadwal();
     return true;
   }
 
@@ -121,55 +152,115 @@ class AppState extends ChangeNotifier {
 
     await _lanjutkan();
     sedangProses = false;
+    _ambilStatus();
     notifyListeners();
+
+    if (status == StatusApp.siap) _mulaiPenjadwal();
   }
 
-  Future<void> muatData() async {
-    jadwal = await _repo.ambilJadwal();
+  Future<void> muatData({bool utamakanLokal = false}) async {
+    jadwal = await _repo.ambilJadwal(utamakanLokal: utamakanLokal);
     riwayat = await _repo.ambilRiwayat();
   }
 
+  /// Menyegarkan dari server (tarik layar, kembali ke aplikasi, atau timer).
+  /// Bila tidak ada koneksi, data di HP tetap tampil dan banner offline muncul.
   Future<void> segarkan() async {
+    if (_menyegarkan) return;
+    _menyegarkan = true;
     pesanError = null;
+
     try {
+      profil = await _repo.ambilProfil();
       await muatData();
     } catch (e) {
       if (!_tanganiSesi(e)) pesanError = _pesan(e);
+    } finally {
+      _menyegarkan = false;
+      _ambilStatus();
+      notifyListeners();
     }
-    notifyListeners();
   }
 
+  /// Konfirmasi "sudah minum": tersimpan di HP seketika, pengiriman ke server menyusul.
   Future<void> tandaiSudahMinum(JadwalItem item) async {
-    sedangProses = true;
     pesanError = null;
-    notifyListeners();
 
     try {
       await _repo.catatMinum(item.id);
-      await muatData();
+      await muatData(utamakanLokal: true);
     } catch (e) {
-      if (!_tanganiSesi(e)) {
-        pesanError = _pesan(e);
-        try {
-          await muatData();
-        } catch (_) {
-          // abaikan: pesan kesalahan utama sudah ditampilkan
-        }
-      }
-    } finally {
-      sedangProses = false;
-      notifyListeners();
+      if (!_tanganiSesi(e)) pesanError = _pesan(e);
     }
+
+    _ambilStatus();
+    notifyListeners();
+    unawaited(_kirimDiamDiam());
+  }
+
+  /// Tombol "Kirim sekarang" pada banner.
+  Future<void> kirimSekarang() async {
+    await _kirimDiamDiam();
+    await segarkan();
   }
 
   Future<void> keluar() async {
     await _repo.keluar();
     _reset();
     status = StatusApp.belumAktif;
+    _ambilStatus();
     notifyListeners();
   }
 
   // ---------------- internal ----------------
+
+  Future<void> _kirimDiamDiam() async {
+    if (_mengirim) return;
+    _mengirim = true;
+    try {
+      await _repo.kirimAntrean();
+    } catch (e) {
+      _tanganiSesi(e);
+    } finally {
+      _mengirim = false;
+      _ambilStatus();
+      notifyListeners();
+    }
+  }
+
+  void _mulaiPenjadwal() {
+    _timer ??= Timer.periodic(const Duration(minutes: 2), (_) {
+      if (status != StatusApp.siap) return;
+      if (jumlahAntrean > 0) {
+        unawaited(_kirimDiamDiam());
+      } else if (memakaiDataLokal) {
+        unawaited(segarkan());
+      }
+    });
+  }
+
+  void _hentikanPenjadwal() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && status == StatusApp.siap) {
+      unawaited(segarkan());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _hentikanPenjadwal();
+    super.dispose();
+  }
+
+  void _ambilStatus() {
+    sinkron = _repo.statusSinkron;
+  }
 
   /// Menentukan layar berikutnya. Gagal jaringan -> layar "Coba lagi" (token tetap tersimpan).
   Future<void> _lanjutkan() async {
@@ -183,11 +274,11 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> _tentukanLangkah() async {
+  Future<void> _tentukanLangkah({bool utamakanLokal = false}) async {
     if (profil != null && !profil!.consentDisetujui) {
       status = StatusApp.perluConsent;
     } else {
-      await muatData();
+      await muatData(utamakanLokal: utamakanLokal);
       status = StatusApp.siap;
     }
   }
@@ -198,12 +289,15 @@ class AppState extends ChangeNotifier {
       _reset();
       pesanError = e.pesan;
       status = StatusApp.belumAktif;
+      _ambilStatus();
+      notifyListeners();
       return true;
     }
     return false;
   }
 
   void _reset() {
+    _hentikanPenjadwal();
     profil = null;
     jadwal = [];
     riwayat = [];

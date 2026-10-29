@@ -9,7 +9,8 @@ class RiwayatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final riwayat = context.watch<AppState>().riwayat;
+    final state = context.watch<AppState>();
+    final riwayat = state.riwayat;
     final tema = Theme.of(context);
 
     return Scaffold(
@@ -23,8 +24,11 @@ class RiwayatScreen extends StatelessWidget {
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: riwayat.length,
-                itemBuilder: (_, i) =>
-                    KartuJadwal(item: riwayat[i], tampilkanTanggal: true),
+                itemBuilder: (_, i) => KartuJadwal(
+                  item: riwayat[i],
+                  tampilkanTanggal: true,
+                  belumTerkirim: state.idBelumTerkirim.contains(riwayat[i].id),
+                ),
               ),
       ),
     );

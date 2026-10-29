@@ -38,4 +38,16 @@ class Profil {
       versiConsent: json['versi_consent'] as String? ?? '1.0',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'nama': nama,
+        'jam_minum_default': jamMinumDefault,
+        'foto_bukti_aktif': fotoBuktiAktif,
+        'pmo': pmoNama == null
+            ? null
+            : {'nama': pmoNama, 'hubungan': pmoHubungan},
+        'resep': resep.map((r) => r.toJson()).toList(),
+        'consent_disetujui': consentDisetujui,
+        'versi_consent': versiConsent,
+      };
 }
